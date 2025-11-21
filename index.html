@@ -1,24 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
-
     <meta charset="utf-8" />
-   <title>Valraven Ritual</title>
+    <title>Valraven Ritual</title>
+
+    <!-- Manifest for Android/Chrome -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+
+    <!-- iOS Safari specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Valraven Ritual">
+
+    <!-- iOS app icons -->
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon.png">
+
+    <!-- p5.js + ml5.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.dom.min.js"></script>
     <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
     <script src="sketch.js"></script>
+
     <style>
       html, body {
         margin: 0;
         padding: 0;
         overflow: hidden;
         background: black;
+        height: 100%;
       }
       canvas {
         display: block;
       }
     </style>
   </head>
+  <body>
+  </body>
+</html>
