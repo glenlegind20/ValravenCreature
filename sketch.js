@@ -72,10 +72,10 @@ let messages = [
 ];
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(displayWidth, displayHeight);
 
   video = createCapture(VIDEO);
-  video.size(windowWidth, windowHeight);
+  video.size(displayWidth, displayHeight);
   video.hide();
 
   video.elt.addEventListener('loadeddata', () => {
@@ -92,6 +92,9 @@ function setup() {
   nextBlink = millis() + random(10000, 20000);
 }
 
+function windowResized() {
+  resizeCanvas(displayWidth, displayHeight);
+}
 function draw() {
   background(0);
   let now = millis();
