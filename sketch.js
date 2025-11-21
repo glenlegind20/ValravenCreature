@@ -29,10 +29,6 @@ let idleEyeFade = false;
 let idleEyeStart = 0;
 let idleEyeDuration = 1000; // total fade cycle
 
-// Buffer for past messages
-let messageBuffer = [];
-let maxBufferLines = 5; // keep last 5 messages visible
-
 // Message pool (cryptic wisdom)
 let messages = [
   "you are seen",
@@ -76,6 +72,7 @@ let messages = [
 ];
 
 function setup() {
+  // Use full device screen size (important for landscape)
   createCanvas(displayWidth, displayHeight);
 
   video = createCapture(VIDEO);
@@ -112,11 +109,6 @@ function draw() {
       blinkProgress = 0;
 
       if (waitingForNext) {
-        // push finished message into buffer
-        messageBuffer.push(fullMessage);
-        if (messageBuffer.length > maxBufferLines) {
-          messageBuffer.shift();
-        }
         startNewMessage();
         waitingForNext = false;
       }
@@ -139,7 +131,10 @@ function draw() {
     }
 
     if (!showEye) {
-      drawMessages();
+      // Draw wrapped text so long lines fit
+      let margin = 40;
+      let maxWidth = width - margin * 2;
+      text(typedMessage, margin, height / 2, maxWidth);
     }
 
     if (waitingForNext && !typing && now - lastTyped > 5000 && !blinking) {
@@ -267,20 +262,6 @@ function drawBlink(progress) {
   let h = map(progress < 0.5 ? progress : 1 - progress, 0, 0.5, 0, height * 0.5);
   rect(0, height / 2 - h, width, h * 2);
   pop();
-}
-
-// Draw wrapped and buffered messages
-function drawMessages() {
-  let y = height / 2;
-  let maxWidth = width - 80;
-
-  // Draw previous messages above
-  for (let i = 0; i < messageBuffer.length; i++) {
-    text(messageBuffer[i], 40, y - (messageBuffer.length - i) * 40, maxWidth);
-  }
-
-  // Draw current typing message
-  text(typedMessage, 40, y, maxWidth);
 }
 
 function touchStarted() {
