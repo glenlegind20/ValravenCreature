@@ -29,6 +29,10 @@ let idleEyeFade = false;
 let idleEyeStart = 0;
 let idleEyeDuration = 1000; // total fade cycle
 
+// Buffer for past messages
+let messageBuffer = [];
+let maxBufferLines = 5; // keep last 5 messages visible
+
 // Message pool (cryptic wisdom)
 let messages = [
   "you are seen",
@@ -92,9 +96,6 @@ function setup() {
   nextBlink = millis() + random(10000, 20000);
 }
 
-function windowResized() {
-  resizeCanvas(displayWidth, displayHeight);
-}
 function draw() {
   background(0);
   let now = millis();
@@ -111,6 +112,11 @@ function draw() {
       blinkProgress = 0;
 
       if (waitingForNext) {
+        // push finished message into buffer
+        messageBuffer.push(fullMessage);
+        if (messageBuffer.length > maxBufferLines) {
+          messageBuffer.shift();
+        }
         startNewMessage();
         waitingForNext = false;
       }
@@ -119,7 +125,7 @@ function draw() {
   }
 
   // If presence detected or recently seen
-  if (faceDetected || now - lastSeen < 2000) {
+  if (faceDetected || now - lastSeen < 10000) {
     if (typing && now - lastTyped > typeSpeed) {
       if (typeIndex < fullMessage.length) {
         typedMessage += fullMessage.charAt(typeIndex);
@@ -133,7 +139,7 @@ function draw() {
     }
 
     if (!showEye) {
-      text(typedMessage, 40, height / 2);
+      drawMessages();
     }
 
     if (waitingForNext && !typing && now - lastTyped > 5000 && !blinking) {
@@ -146,6 +152,7 @@ function draw() {
     if (!idleEyeFade && now > nextBlink) {
       idleEyeFade = true;
       idleEyeStart = now;
+      showEye = false;
       nextBlink = now + random(10000, 20000);
     }
 
@@ -238,7 +245,7 @@ function drawEye(alpha = 255) {
   let w = width * 0.8;
   let h = height * 0.5;
 
-  fill(128, 0, 128, alpha * 0.6);
+  fill(128, 0, 128, min(alpha * 0.6, 255));
   beginShape();
   vertex(cx - w / 2, cy);
   vertex(cx - w / 4, cy - h / 2);
@@ -262,12 +269,32 @@ function drawBlink(progress) {
   pop();
 }
 
+// Draw wrapped and buffered messages
+function drawMessages() {
+  let y = height / 2;
+  let maxWidth = width - 80;
+
+  // Draw previous messages above
+  for (let i = 0; i < messageBuffer.length; i++) {
+    text(messageBuffer[i], 40, y - (messageBuffer.length - i) * 40, maxWidth);
+  }
+
+  // Draw current typing message
+  text(typedMessage, 40, y, maxWidth);
+}
+
 function touchStarted() {
   if (!fullscreen()) {
     fullscreen(true);
   }
 }
 
+function mousePressed() {
+  if (!fullscreen()) {
+    fullscreen(true);
+  }
+}
+
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
+  resizeCanvas(displayWidth, displayHeight);
 }
