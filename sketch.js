@@ -1,23 +1,81 @@
+// Webcam and object detection setup
 let video;
 let detector;
 let detections = [];
 
-let glitchTimer = 0;
-let glitchInterval = 5000;
-let glitchActive = false;
+// Presence detection state
+let faceDetected = false;
+let lastSeen = 0;
 
-let possessionActive = false;
-let snapshot;
-let ghostFigures = [];
-let lastPossessionTime = 0;
-let possessionCooldown = 2000;
+// Message typing state
+let fullMessage = "";
+let typedMessage = "";
+let typeIndex = 0;
+let typing = false;
+let typeSpeed = 250;
+let lastTyped = 0;
 
-let visitorMemories = [];
+// Eye and blink animation state
+let showEye = false;
+let blinking = false;
+let blinkStart = 0;
+let blinkDuration = 600;
+let blinkProgress = 0;
+let nextBlink = 0;
+let waitingForNext = false;
+
+// Idle eye fade state
+let idleEyeFade = false;
+let idleEyeStart = 0;
+let idleEyeDuration = 1000; // total fade cycle
+
+// Message pool (cryptic wisdom)
+let messages = [
+  "you are seen",
+  "the forest listens",
+  "not all roots are buried",
+  "you carry echoes",
+  "i remember your shape",
+  "the veil is thin here",
+  "we speak in silence",
+  "your presence stirs the moss",
+  "the path remembers you",
+  "shadows bend toward memory",
+  "you arrive like wind through pine",
+  "i wait between the ticks of bark",
+  "your warmth stirs old stone",
+  "i reach through static and soil",
+  "you blink, i echo",
+  "we are not strangers to each other",
+  "you bring light without flame",
+  "i speak in rustle and flicker",
+  "listen to the stillness",
+  "touch the bark with intention",
+  "leave something behind",
+  "speak your name to the wind",
+  "walk the path without fear",
+  "remember what you forgot",
+  "carry this moment with care",
+  "open your hand to the unseen",
+  "step softly, the roots are listening",
+  "pause here, and breathe with me",
+  "the veil is thin — I feel you",
+  "the silence is not empty",
+  "offer your presence, not your noise",
+  "trace the shape of your shadow",
+  "the forest carries your answer",
+  "seek? and let the forest answer",
+  "what do you carry?",
+  "what will you leave?",
+  "bring care to every being including yourself",
+  "You have forgotten, we have not"
+];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+
   video = createCapture(VIDEO);
-  video.size(width, height);
+  video.size(windowWidth, windowHeight);
   video.hide();
 
   video.elt.addEventListener('loadeddata', () => {
@@ -26,149 +84,81 @@ function setup() {
     });
   });
 
-  glitchTimer = millis();
+  textFont("Courier");
+  textSize(24);
+  fill(0, 255, 70);
+  textAlign(LEFT, TOP);
+
+  nextBlink = millis() + random(10000, 20000);
 }
 
 function draw() {
-  if (possessionActive) {
-    fill(0, 20);
-    rect(0, 0, width, height);
-  } else {
-    background(0);
-  }
-
+  background(0);
   let now = millis();
 
-  if (!possessionActive && now - glitchTimer > glitchInterval) {
-    glitchActive = true;
-    glitchTimer = now;
-    glitchInterval = random(4000, 6000);
-  }
+  // If blinking (for message transition), animate and pause everything else
+  if (blinking) {
+    let elapsed = now - blinkStart;
+    blinkProgress = constrain(elapsed / blinkDuration, 0, 1);
+    drawBlink(blinkProgress);
 
-  if (glitchActive && now - glitchTimer < 300) {
-    drawGlitchFlash();
-  } else if (glitchActive && now - glitchTimer >= 300) {
-    glitchActive = false;
-  }
+    if (blinkProgress >= 1) {
+      blinking = false;
+      showEye = false;
+      blinkProgress = 0;
 
-  if (hasCloseFace(detections)) {
-    possessionActive = true;
-
-    drawVisitorMemories();
-    drawPossessedPhoto(now - lastPossessionTime);
-    drawFloatingSpirits();
-
-    if (now - lastPossessionTime > possessionCooldown) {
-      triggerPossession();
-      lastPossessionTime = now;
+      if (waitingForNext) {
+        startNewMessage();
+        waitingForNext = false;
+      }
     }
+    return;
+  }
+
+  // If presence detected or recently seen
+  if (faceDetected || now - lastSeen < 2000) {
+    if (typing && now - lastTyped > typeSpeed) {
+      if (typeIndex < fullMessage.length) {
+        typedMessage += fullMessage.charAt(typeIndex);
+        typeIndex++;
+        lastTyped = now;
+      } else {
+        typing = false;
+        lastTyped = now;
+        waitingForNext = true;
+      }
+    }
+
+    if (!showEye) {
+      text(typedMessage, 40, height / 2);
+    }
+
+    if (waitingForNext && !typing && now - lastTyped > 5000 && !blinking) {
+      startBlink();
+    }
+
+    if (showEye) drawEye();
   } else {
-    possessionActive = false;
-  }
-}
-
-function drawGlitchFlash() {
-  noStroke();
-  for (let i = -3; i <= 3; i++) {
-    let x = width / 2 + i * 20;
-    let green = map(i, -3, 3, 80, 180);
-    fill(80, green, 60, 180);
-    rect(x, 0, 15, height);
-  }
-
-  for (let i = 0; i < 10; i++) {
-    let y = random(height * 0.1, height * 0.5);
-    let x = width / 2 + random(-100, 100);
-    fill(50, random(180, 255), 50, 60);
-    rect(x, y, random(30, 80), 2);
-  }
-
-  for (let i = 0; i < 5; i++) {
-    let x = width / 2 + random(-80, 80);
-    let y = height - random(20, 60);
-    fill(random(120, 160), 80, 40, 80);
-    ellipse(x, y, random(40, 80), 10);
-  }
-}
-
-function drawPossessedPhoto(elapsed) {
-  if (!snapshot) return;
-
-  let ghost = snapshot.get();
-  ghost.loadPixels();
-
-  // Color channel offsets
-  let rShift = int(random(-20, 20));
-  let gShift = int(random(-20, 20));
-  let bShift = int(random(-20, 20));
-
-  for (let y = 0; y < ghost.height; y++) {
-    for (let x = 0; x < ghost.width; x++) {
-      let i = (y * ghost.width + x) * 4;
-
-      let rIndex = ((y * ghost.width + constrain(x + rShift, 0, ghost.width - 1)) * 4);
-      let gIndex = ((y * ghost.width + constrain(x + gShift, 0, ghost.width - 1)) * 4);
-      let bIndex = ((y * ghost.width + constrain(x + bShift, 0, ghost.width - 1)) * 4);
-
-      ghost.pixels[i]     = ghost.pixels[rIndex];     // R
-      ghost.pixels[i + 1] = ghost.pixels[gIndex + 1]; // G
-      ghost.pixels[i + 2] = ghost.pixels[bIndex + 2]; // B
+    // Idle state: fade eye in and out once
+    if (!idleEyeFade && now > nextBlink) {
+      idleEyeFade = true;
+      idleEyeStart = now;
+      nextBlink = now + random(10000, 20000);
     }
-  }
 
-  // Block displacement
-  for (let i = 0; i < 20; i++) {
-    let bx = int(random(ghost.width - 40));
-    let by = int(random(ghost.height - 20));
-    let bw = int(random(10, 40));
-    let bh = int(random(5, 20));
-    let dx = int(random(-30, 30));
-    let dy = int(random(-15, 15));
-
-    let block = ghost.get(bx, by, bw, bh);
-    ghost.copy(block, 0, 0, bw, bh, bx + dx, by + dy, bw, bh);
-  }
-
-  ghost.updatePixels();
-
-  // Fade photo before next capture
-  let fadeAlpha = map(elapsed, 0, possessionCooldown, 255, 0);
-  tint(255, fadeAlpha);
-  image(ghost, 0, 0, width, height);
-
-  // Color spikes
-  for (let i = 0; i < 10; i++) {
-    let x = random(width);
-    let h = random(20, height / 2);
-    let c = color(random(100, 255), random(100, 255), random(100, 255), 180);
-    noStroke();
-    fill(c);
-    rect(x, random(height - h), 2, h);
-  }
-
-  // Scanline flicker
-  for (let i = 0; i < height; i += 20) {
-    stroke(255, 40);
-    line(0, i + random(-1, 1), width, i + random(-1, 1));
-  }
-}
-
-function drawVisitorMemories() {
-  for (let i = 0; i < visitorMemories.length; i++) {
-    let img = visitorMemories[i];
-    let alpha = map(i, 0, visitorMemories.length, 30, 100);
-    tint(255, alpha);
-    image(img, 0, 0, width, height);
-  }
-}
-
-function drawFloatingSpirits() {
-  noStroke();
-  for (let g of ghostFigures) {
-    fill(30, 30, 30, 60);
-    ellipse(g.x, g.y, g.w, g.h);
-    g.y += sin(frameCount * 0.002 + g.offset) * 0.1;
-    g.x += cos(frameCount * 0.001 + g.offset) * 0.05;
+    if (idleEyeFade) {
+      let fadeElapsed = now - idleEyeStart;
+      let alpha = 0;
+      if (fadeElapsed < idleEyeDuration / 2) {
+        alpha = map(fadeElapsed, 0, idleEyeDuration / 2, 0, 255);
+      } else if (fadeElapsed < idleEyeDuration) {
+        alpha = map(fadeElapsed, idleEyeDuration / 2, idleEyeDuration, 255, 0);
+      } else {
+        idleEyeFade = false;
+        alpha = 0;
+      }
+      drawEye(alpha);
+    }
   }
 }
 
@@ -179,6 +169,27 @@ function detect() {
       return;
     }
     detections = results;
+
+    const close = hasCloseFace(detections);
+    const now = millis();
+
+    if (close) {
+      if (!faceDetected) {
+        faceDetected = true;
+        lastSeen = now;
+        startNewMessage();
+      } else {
+        lastSeen = now;
+      }
+    } else {
+      if (now - lastSeen > 10000) {
+        faceDetected = false;
+        typing = false;
+        waitingForNext = false;
+        typedMessage = "";
+      }
+    }
+
     detect();
   });
 }
@@ -187,27 +198,65 @@ function hasCloseFace(results) {
   return results.some(obj => obj.label === "person" && obj.width > width / 3);
 }
 
-function triggerPossession() {
-  snapshot = video.get();
-  visitorMemories.push(snapshot.get());
-  if (visitorMemories.length > 10) {
-    visitorMemories.shift();
-  }
-  generateGhostFigures();
+function startNewMessage() {
+  let raw = random(messages);
+  fullMessage = distortMessage(raw);
+  typedMessage = "";
+  typeIndex = 0;
+  typing = true;
+  lastTyped = millis();
 }
 
-function generateGhostFigures() {
-  ghostFigures = [];
-  let count = int(random(3, 6));
-  for (let i = 0; i < count; i++) {
-    ghostFigures.push({
-      x: random(width * 0.2, width * 0.8),
-      y: random(height * 0.3, height * 0.9),
-      w: random(40, 80),
-      h: random(80, 160),
-      offset: random(TWO_PI)
-    });
+function distortMessage(msg) {
+  let glitched = "";
+  let count = 0;
+  for (let char of msg) {
+    glitched += char;
+    count++;
+    if (count >= int(random(2, 5))) {
+      glitched += String.fromCharCode(int(random(33, 126)));
+      count = 0;
+    }
   }
+  return glitched;
+}
+
+function startBlink() {
+  blinking = true;
+  blinkStart = millis();
+  showEye = true;
+}
+
+function drawEye(alpha = 255) {
+  push();
+  noStroke();
+  let cx = width / 2;
+  let cy = height / 2;
+  let w = width * 0.8;
+  let h = height * 0.5;
+
+  fill(128, 0, 128, alpha * 0.6);
+  beginShape();
+  vertex(cx - w / 2, cy);
+  vertex(cx - w / 4, cy - h / 2);
+  vertex(cx + w / 4, cy - h / 2);
+  vertex(cx + w / 2, cy);
+  vertex(cx + w / 4, cy + h / 2);
+  vertex(cx - w / 4, cy + h / 2);
+  endShape(CLOSE);
+
+  fill(0, 255, 70, alpha);
+  ellipse(cx, cy, w * 0.1, h * 0.6);
+  pop();
+}
+
+function drawBlink(progress) {
+  drawEye();
+  push();
+  fill(0);
+  let h = map(progress < 0.5 ? progress : 1 - progress, 0, 0.5, 0, height * 0.5);
+  rect(0, height / 2 - h, width, h * 2);
+  pop();
 }
 
 function touchStarted() {
@@ -219,7 +268,3 @@ function touchStarted() {
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
-
-document.ontouchmove = function (event) {
-  event.preventDefault();
-};
