@@ -8,15 +8,14 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
 
-    <!-- iOS Safari specific meta tags -->
+    <!-- iOS Safari fullscreen support -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Valraven Ritual">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-    <!-- iOS app icons -->
+    <!-- iOS app icon -->
     <link rel="apple-touch-icon" href="icon.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="icon.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="icon.png">
 
     <!-- p5.js + ml5.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
@@ -28,12 +27,14 @@
       html, body {
         margin: 0;
         padding: 0;
-        overflow: hidden;
-        background: black;
         height: 100%;
+        width: 100%;
+        background: black;
       }
       canvas {
         display: block;
+        width: 100vw;
+        height: 100vh;
       }
     </style>
   </head>
