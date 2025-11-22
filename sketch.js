@@ -12,14 +12,14 @@ let fullMessage = "";
 let typedMessage = "";
 let typeIndex = 0;
 let typing = false;
-let typeSpeed = 250; // ms per character
+let typeSpeed = 250;
 let lastTyped = 0;
 
 // Eye and blink animation state
 let showEye = false;
 let blinking = false;
 let blinkStart = 0;
-let blinkDuration = 600; // ms
+let blinkDuration = 600;
 let blinkProgress = 0;
 let nextBlink = 0;
 let waitingForNext = false;
@@ -29,14 +29,14 @@ let idleEyeFade = false;
 let idleEyeStart = 0;
 let idleEyeDuration = 1000; // total fade cycle
 
-// Buffer for past messages (visible while presence persists)
+// Buffer for past messages
 let messageBuffer = [];
-let maxBufferLines = 5; // keep last N finished messages
+let maxBufferLines = 5; // keep last 5 messages visible
 
 // Layout
-let margin = 40; // text side margin
+let margin = 40; // text margin
 
-// Message pool (cryptic wisdom)
+// Message pool
 let messages = [
   "you are seen",
   "the forest listens",
@@ -79,22 +79,18 @@ let messages = [
 ];
 
 function setup() {
-  // Use full device screen (important for iOS standalone + landscape)
-  createCanvas(displayWidth, displayHeight);
+  createCanvas(window.innerWidth, window.innerHeight);
 
-  // Camera sized to the canvas
   video = createCapture(VIDEO);
-  video.size(displayWidth, displayHeight);
+  video.size(window.innerWidth, window.innerHeight);
   video.hide();
 
-  // Object detector init
   video.elt.addEventListener('loadeddata', () => {
     detector = ml5.objectDetector('cocossd', () => {
       detect();
     });
   });
 
-  // Text style
   textFont("Courier");
   textSize(24);
   fill(0, 255, 70);
@@ -105,11 +101,10 @@ function setup() {
 
 function draw() {
   background(0);
-  const now = millis();
+  let now = millis();
 
-  // Blink animation takes over while active
   if (blinking) {
-    const elapsed = now - blinkStart;
+    let elapsed = now - blinkStart;
     blinkProgress = constrain(elapsed / blinkDuration, 0, 1);
     drawBlink(blinkProgress);
 
@@ -119,7 +114,6 @@ function draw() {
       blinkProgress = 0;
 
       if (waitingForNext) {
-        // When a message has finished (post-blink), add it to buffer
         messageBuffer.push(fullMessage);
         if (messageBuffer.length > maxBufferLines) {
           messageBuffer.shift();
@@ -131,12 +125,7 @@ function draw() {
     return;
   }
 
-  // Presence or recent presence window
-  const presenceWindowMs = 10000; // keep content alive for 10s after last seen
-  const isPresent = faceDetected || (now - lastSeen < presenceWindowMs);
-
-  if (isPresent) {
-    // Typewriter
+  if (faceDetected || now - lastSeen < 10000) {
     if (typing && now - lastTyped > typeSpeed) {
       if (typeIndex < fullMessage.length) {
         typedMessage += fullMessage.charAt(typeIndex);
@@ -149,20 +138,17 @@ function draw() {
       }
     }
 
-    // Draw wrapped text while eye is not showing
     if (!showEye) {
       drawMessages();
     }
 
-    // After a pause, trigger blink to transition
     if (waitingForNext && !typing && now - lastTyped > 5000 && !blinking) {
       startBlink();
     }
 
-    // Draw eye when blinking/transition state requests it
     if (showEye) drawEye();
   } else {
-    // When presence is gone beyond the window, clear buffer and current text
+    // Clear buffer when no face for a while
     if (messageBuffer.length > 0 || typedMessage.length > 0) {
       messageBuffer = [];
       typedMessage = "";
@@ -170,7 +156,6 @@ function draw() {
       typing = false;
     }
 
-    // Idle eye: single fade in/out occasionally
     if (!idleEyeFade && now > nextBlink) {
       idleEyeFade = true;
       idleEyeStart = now;
@@ -179,7 +164,7 @@ function draw() {
     }
 
     if (idleEyeFade) {
-      const fadeElapsed = now - idleEyeStart;
+      let fadeElapsed = now - idleEyeStart;
       let alpha = 0;
       if (fadeElapsed < idleEyeDuration / 2) {
         alpha = map(fadeElapsed, 0, idleEyeDuration / 2, 0, 255);
@@ -214,7 +199,6 @@ function detect() {
         lastSeen = now;
       }
     } else {
-      // When not close and long enough since last seen, drop presence
       if (now - lastSeen > 10000) {
         faceDetected = false;
         typing = false;
@@ -223,18 +207,16 @@ function detect() {
       }
     }
 
-    // Loop detection
     detect();
   });
 }
 
 function hasCloseFace(results) {
-  // Heuristic: a "person" bounding box wider than a third of canvas width
   return results.some(obj => obj.label === "person" && obj.width > width / 3);
 }
 
 function startNewMessage() {
-  const raw = random(messages);
+  let raw = random(messages);
   fullMessage = distortMessage(raw);
   typedMessage = "";
   typeIndex = 0;
@@ -265,13 +247,12 @@ function startBlink() {
 function drawEye(alpha = 255) {
   push();
   noStroke();
-  const cx = width / 2;
-  const cy = height / 2;
-  const w = width * 0.8;
-  const h = height * 0.5;
+  let cx = width / 2;
+  let cy = height / 2;
+  let w = width * 0.8;
+  let h = height * 0.5;
 
-  // Purple sclera
-  fill(128, 0, 128, Math.min(alpha * 0.6, 255));
+  fill(128, 0, 128, min(alpha * 0.6, 255));
   beginShape();
   vertex(cx - w / 2, cy);
   vertex(cx - w / 4, cy - h / 2);
@@ -281,7 +262,6 @@ function drawEye(alpha = 255) {
   vertex(cx - w / 4, cy + h / 2);
   endShape(CLOSE);
 
-  // Green pupil
   fill(0, 255, 70, alpha);
   ellipse(cx, cy, w * 0.1, h * 0.6);
   pop();
@@ -291,27 +271,23 @@ function drawBlink(progress) {
   drawEye();
   push();
   fill(0);
-  const h = map(progress < 0.5 ? progress : 1 - progress, 0, 0.5, 0, height * 0.5);
+  let h = map(progress < 0.5 ? progress : 1 - progress, 0, 0.5, 0, height * 0.5);
   rect(0, height / 2 - h, width, h * 2);
   pop();
 }
 
-// Draw wrapped messages: previous buffered above, current typing at center
 function drawMessages() {
-  const maxWidth = width - margin * 2;
-  const centerY = height / 2;
+  let maxWidth = width - margin * 2;
+  let centerY = height / 2;
 
-  // Previous finished messages (buffer), stacked upward
   for (let i = 0; i < messageBuffer.length; i++) {
-    const y = centerY - (messageBuffer.length - i) * 40;
+    let y = centerY - (messageBuffer.length - i) * 40;
     text(messageBuffer[i], margin, y, maxWidth);
   }
 
-  // Current typing line
   text(typedMessage, margin, centerY, maxWidth);
 }
 
-// Fullscreen triggers for touch and mouse (helpful on mobile/desktop)
 function touchStarted() {
   if (!fullscreen()) {
     fullscreen(true);
@@ -324,13 +300,12 @@ function mousePressed() {
   }
 }
 
-// Robust resize handling for orientation changes
 function windowResized() {
-  // Re-create canvas with full device dimensions
-  resizeCanvas(displayWidth, displayHeight);
+  // Re-create canvas with current orientation dimensions
+  resizeCanvas(window.innerWidth, window.innerHeight);
 
   // Also ensure video matches new size
   if (video && video.size) {
-    video.size(displayWidth, displayHeight);
+    video.size(window.innerWidth, window.innerHeight);
   }
 }
