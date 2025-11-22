@@ -12,7 +12,7 @@ let fullMessage = "";
 let typedMessage = "";
 let typeIndex = 0;
 let typing = false;
-let typeSpeed = 250;
+let typeSpeed = 400; // slower typing: 0.4s per character
 let lastTyped = 0;
 
 // Eye and blink animation state
@@ -27,16 +27,16 @@ let waitingForNext = false;
 // Idle eye fade state
 let idleEyeFade = false;
 let idleEyeStart = 0;
-let idleEyeDuration = 1000; // total fade cycle
+let idleEyeDuration = 1000;
 
 // Buffer for past messages
 let messageBuffer = [];
-let maxBufferLines = 5; // keep last 5 messages visible
+let maxBufferLines = 5;
 
 // Layout
-let margin = 40; // text margin
+let margin = 60; // increased margin so first letter isn’t clipped
 
-// Message pool
+// Expanded message pool
 let messages = [
   "you are seen",
   "the forest listens",
@@ -75,7 +75,24 @@ let messages = [
   "what do you carry?",
   "what will you leave?",
   "bring care to every being including yourself",
-  "You have forgotten, we have not"
+  "You have forgotten, we have not",
+  // New additions
+  "the river remembers every stone",
+  "branches bend toward your breath",
+  "owl eyes watch between the leaves",
+  "moss grows where patience lingers",
+  "listen: the soil hums beneath you",
+  "your shadow joins the roots",
+  "wind carries your name across the canopy",
+  "the grove shelters your silence",
+  "stones speak in slow time",
+  "the forest floor cradles your steps",
+  "dew gathers your reflection",
+  "the horizon is stitched with pine",
+  "your heartbeat joins the chorus of crickets",
+  "the path is older than memory",
+  "lichen writes your presence on bark",
+  "the clearing waits for your offering"
 ];
 
 function setup() {
@@ -252,7 +269,7 @@ function drawEye(alpha = 255) {
   let w = width * 0.8;
   let h = height * 0.5;
 
-  fill(128, 0, 128, min(alpha * 0.6, 255));
+  fill(128, 0, 128, Math.min(alpha * 0.6, 255));
   beginShape();
   vertex(cx - w / 2, cy);
   vertex(cx - w / 4, cy - h / 2);
@@ -276,18 +293,22 @@ function drawBlink(progress) {
   pop();
 }
 
+// Draw wrapped messages: previous buffered above, current typing at center
 function drawMessages() {
   let maxWidth = width - margin * 2;
   let centerY = height / 2;
 
+  // Previous finished messages (buffer), stacked upward
   for (let i = 0; i < messageBuffer.length; i++) {
     let y = centerY - (messageBuffer.length - i) * 40;
     text(messageBuffer[i], margin, y, maxWidth);
   }
 
+  // Current typing line
   text(typedMessage, margin, centerY, maxWidth);
 }
 
+// Fullscreen triggers for touch and mouse (helpful on mobile/desktop)
 function touchStarted() {
   if (!fullscreen()) {
     fullscreen(true);
@@ -300,11 +321,11 @@ function mousePressed() {
   }
 }
 
+// Robust resize handling for orientation changes (no CSS needed)
 function windowResized() {
-  // Re-create canvas with current orientation dimensions
   resizeCanvas(window.innerWidth, window.innerHeight);
 
-  // Also ensure video matches new size
+  // Keep the camera matched to the new canvas size
   if (video && video.size) {
     video.size(window.innerWidth, window.innerHeight);
   }
