@@ -92,11 +92,7 @@ let messages = [
   "your heartbeat joins the chorus of crickets",
   "the path is older than memory",
   "lichen writes your presence on bark",
-  "we waits for your offering"
-  "take only what you need, give back what you can"
-  "the gods lingers here"
- "polution only brings death"
-"Valhalla awaits, everyone who´s worthy"
+  "the clearing waits for your offering"
 ];
 
 function setup() {
